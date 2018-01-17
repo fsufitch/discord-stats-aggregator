@@ -1,0 +1,6 @@
+hash: 6cee7f75f68da53ed557191620fde5c98cfd220bd33dd69585eefbb0a1e032fe
+updated: 2018-01-17T15:57:55.039427218-05:00
+imports:
+- name: github.com/bwmarrin/discordgo
+  version: 4a33b9bc7c56cfdb9bb244e33e83cb3941fe2bdc
+testImports: []

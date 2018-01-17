@@ -1,0 +1,4 @@
+package: github.com/fsufitch/discord-stats-aggregator
+import:
+- package: github.com/bwmarrin/discordgo
+  version: ^0.18.0
