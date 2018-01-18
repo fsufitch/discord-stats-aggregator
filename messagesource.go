@@ -101,6 +101,9 @@ func (s BasicMessageSource) asyncStreamMessages(progressChan chan<- Progress) {
 
 	for _, ch := range channels {
 		for crawlMsg := range crawlLinkedMessages(session, ch) {
+			if messagesRecorded > 2000 {
+				break
+			}
 			if crawlMsg.Error != nil {
 				err = fmt.Errorf("error crawling messages: %v", err)
 			} else if s.applyFilters(crawlMsg.LinkedMessage) {
@@ -133,15 +136,10 @@ type crawlMessage struct {
 func crawlLinkedMessages(s *discordgo.Session, channel *discordgo.Channel) <-chan crawlMessage {
 	msgChan := make(chan crawlMessage)
 
-	debugCount := 0
-
 	go func() {
 		beforeID := ""
 		var oldest *CrawledMessage
 		for {
-			if debugCount > 250 {
-				break
-			}
 			messages, err := s.ChannelMessages(channel.ID, 100, beforeID, "", "")
 			if err != nil {
 				msgChan <- crawlMessage{Error: fmt.Errorf("error getting discord user channels: %v", err)}
@@ -152,11 +150,9 @@ func crawlLinkedMessages(s *discordgo.Session, channel *discordgo.Channel) <-cha
 
 			if oldest != nil {
 				msgChan <- crawlMessage{LinkedMessage: oldest}
-				debugCount++
 			}
 			for i := 0; i < len(linkedMessages)-1; i++ {
 				msgChan <- crawlMessage{LinkedMessage: linkedMessages[i]}
-				debugCount++
 			}
 
 			if len(messages) == 0 {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	pb "gopkg.in/cheggaaa/pb.v1"
 
@@ -16,9 +17,11 @@ func main() {
 	progressChan, resultChan := discordstats.EasyModeProgress(authKey, []discordstats.MessageFilter{
 		filter.ByPublicChannel(true),
 		filter.ByBot(false),
+		filter.BeforeTime(time.Unix(1516221721, 0)),
 	}, []discordstats.MessageAnalyzer{
 		&analyzer.UserMessageTally{},
 		&analyzer.ReactionTally{},
+		&analyzer.TopReactionMessages{},
 	})
 
 	msgCounter := pb.New(0)
