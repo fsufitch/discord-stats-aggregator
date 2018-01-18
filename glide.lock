@@ -1,6 +1,22 @@
-hash: 6cee7f75f68da53ed557191620fde5c98cfd220bd33dd69585eefbb0a1e032fe
-updated: 2018-01-17T15:57:55.039427218-05:00
+hash: b19de8a1219a05c50237429b0939d9cb2004383915f0eac758a472f9f8f17302
+updated: 2018-01-18T12:45:55.790938322-05:00
 imports:
 - name: github.com/bwmarrin/discordgo
   version: 4a33b9bc7c56cfdb9bb244e33e83cb3941fe2bdc
+- name: github.com/gorilla/websocket
+  version: 292fd08b2560ad524ee37396253d71570339a821
+- name: github.com/mattn/go-runewidth
+  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
+- name: golang.org/x/crypto
+  version: 13931e22f9e72ea58bb73048bc752b48c6d4d4ac
+  subpackages:
+  - nacl/secretbox
+  - poly1305
+  - salsa20/salsa
+- name: golang.org/x/sys
+  version: 2c42eef0765b9837fbdab12011af7830f55f88f0
+  subpackages:
+  - unix
+- name: gopkg.in/cheggaaa/pb.v1
+  version: 43d64de27312b32812ca7e994fa0bb03ccf08fdf
 testImports: []

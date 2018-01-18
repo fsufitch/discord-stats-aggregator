@@ -9,23 +9,23 @@ func FilterByGuildID(guildIDs ...string) MessageFilter {
 		set[id] = true
 	}
 
-	return func(m *discordgo.Message, c *discordgo.Channel) bool {
-		_, found := set[c.GuildID]
+	return func(m *CrawledMessage) bool {
+		_, found := set[m.Channel.GuildID]
 		return found
 	}
 }
 
 // FilterByPublicChannel creates a message filter for channels that are/are not public
 func FilterByPublicChannel(public bool) MessageFilter {
-	return func(m *discordgo.Message, c *discordgo.Channel) bool {
-		return (public && c.Type == discordgo.ChannelTypeGuildText) ||
-			(!public && c.Type == discordgo.ChannelTypeDM)
+	return func(m *CrawledMessage) bool {
+		return (public && m.Channel.Type == discordgo.ChannelTypeGuildText) ||
+			(!public && m.Channel.Type == discordgo.ChannelTypeDM)
 	}
 }
 
 // FilterByBot creates a message filter for messages by/not by bots
 func FilterByBot(bot bool) MessageFilter {
-	return func(m *discordgo.Message, c *discordgo.Channel) bool {
-		return (bot && m.Author.Bot) || (!bot && !m.Author.Bot)
+	return func(m *CrawledMessage) bool {
+		return (bot && m.Message.Author.Bot) || (!bot && !m.Message.Author.Bot)
 	}
 }

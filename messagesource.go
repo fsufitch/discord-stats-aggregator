@@ -1,6 +1,10 @@
 package discordstats
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"fmt"
+
+	"github.com/bwmarrin/discordgo"
+)
 
 // BasicMessageSource is a MessageSource based on a Discord session and a time bracket
 type BasicMessageSource struct {
@@ -15,7 +19,7 @@ func (s *BasicMessageSource) AddRecipients(recipients ...MessageRecipient) {
 	s.recipients = append(s.recipients, recipients...)
 }
 
-func (s BasicMessageSource) sendMessageToAllRecipients(m *discordgo.Message) error {
+func (s BasicMessageSource) sendMessageToAllRecipients(m *CrawledMessage) error {
 	for _, recipient := range s.recipients {
 		err := recipient.AddMessage(m)
 		if err != nil {
@@ -30,9 +34,9 @@ func (s *BasicMessageSource) AddFilters(filters ...MessageFilter) {
 	s.filters = append(s.filters, filters...)
 }
 
-func (s BasicMessageSource) applyFilters(m *discordgo.Message, c *discordgo.Channel) bool {
+func (s BasicMessageSource) applyFilters(m *CrawledMessage) bool {
 	for _, filter := range s.filters {
-		if !filter(m, c) {
+		if !filter(m) {
 			return false
 		}
 	}
@@ -52,15 +56,38 @@ func (s BasicMessageSource) StreamMessages() <-chan Progress {
 func (s BasicMessageSource) asyncStreamMessages(progressChan chan<- Progress) {
 	session, err := discordgo.New(s.DiscordAuthToken)
 	if err != nil {
-		progressChan <- Progress{Error: err}
+		progressChan <- Progress{Error: fmt.Errorf("error creating discord session: %v", err)}
+		close(progressChan)
 		return
 	}
 
-	channels, err := session.UserChannels()
+	guilds, err := session.UserGuilds(100, "", "")
 	if err != nil {
-		progressChan <- Progress{Error: err}
+		progressChan <- Progress{Error: fmt.Errorf("error getting discord guilds: %v", err)}
+		close(progressChan)
 		return
 	}
+
+	channels := []*discordgo.Channel{}
+
+	for _, guild := range guilds {
+		var guildChannels []*discordgo.Channel
+		guildChannels, err = session.GuildChannels(guild.ID)
+		if err != nil {
+			progressChan <- Progress{Error: fmt.Errorf("error getting guild channels: %v", err)}
+			close(progressChan)
+			return
+		}
+		channels = append(channels, guildChannels...)
+	}
+
+	privateChannels, err := session.UserChannels()
+	if err != nil {
+		progressChan <- Progress{Error: fmt.Errorf("error getting discord user channels: %v", err)}
+		close(progressChan)
+		return
+	}
+	channels = append(channels, privateChannels...)
 
 	var (
 		messagesRead     = 0
@@ -73,9 +100,14 @@ func (s BasicMessageSource) asyncStreamMessages(progressChan chan<- Progress) {
 	}
 
 	for _, ch := range channels {
-		for _, msg := range ch.Messages {
-			if s.applyFilters(msg, ch) {
-				err = s.sendMessageToAllRecipients(msg)
+		for crawlMsg := range crawlLinkedMessages(session, ch) {
+			if crawlMsg.Error != nil {
+				err = fmt.Errorf("error crawling messages: %v", err)
+			} else if s.applyFilters(crawlMsg.LinkedMessage) {
+				err = s.sendMessageToAllRecipients(crawlMsg.LinkedMessage)
+				if err != nil {
+					err = fmt.Errorf("error passing message to recipients: %v", err)
+				}
 				messagesRecorded++
 			} else {
 				err = nil
@@ -91,4 +123,75 @@ func (s BasicMessageSource) asyncStreamMessages(progressChan chan<- Progress) {
 	}
 
 	close(progressChan)
+}
+
+type crawlMessage struct {
+	LinkedMessage *CrawledMessage
+	Error         error
+}
+
+func crawlLinkedMessages(s *discordgo.Session, channel *discordgo.Channel) <-chan crawlMessage {
+	msgChan := make(chan crawlMessage)
+
+	debugCount := 0
+
+	go func() {
+		beforeID := ""
+		var oldest *CrawledMessage
+		for {
+			if debugCount > 250 {
+				break
+			}
+			messages, err := s.ChannelMessages(channel.ID, 100, beforeID, "", "")
+			if err != nil {
+				msgChan <- crawlMessage{Error: fmt.Errorf("error getting discord user channels: %v", err)}
+				close(msgChan)
+				return
+			}
+			linkedMessages := linkMessages(channel, messages, oldest)
+
+			if oldest != nil {
+				msgChan <- crawlMessage{LinkedMessage: oldest}
+				debugCount++
+			}
+			for i := 0; i < len(linkedMessages)-1; i++ {
+				msgChan <- crawlMessage{LinkedMessage: linkedMessages[i]}
+				debugCount++
+			}
+
+			if len(messages) == 0 {
+				break
+			}
+			oldest = linkedMessages[len(linkedMessages)-1]
+			beforeID = oldest.Message.ID
+		}
+
+		if oldest != nil {
+			msgChan <- crawlMessage{LinkedMessage: oldest}
+		}
+		close(msgChan)
+	}()
+
+	return msgChan
+}
+
+func linkMessages(channel *discordgo.Channel, messages []*discordgo.Message, capNewer *CrawledMessage) []*CrawledMessage {
+	linkedMessages := []*CrawledMessage{}
+	if len(messages) == 0 {
+		return linkedMessages
+	}
+	for _, m := range messages {
+		linkedMessages = append(linkedMessages, &CrawledMessage{Message: m, Channel: channel})
+	}
+	for i := 1; i < len(linkedMessages)-1; i++ {
+		linkedMessages[i].Newer = linkedMessages[i-1]
+		linkedMessages[i].Older = linkedMessages[i+1]
+	}
+
+	linkedMessages[0].Newer = capNewer
+	if capNewer != nil {
+		capNewer.Older = linkedMessages[0]
+	}
+
+	return linkedMessages
 }

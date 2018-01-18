@@ -3,7 +3,7 @@ package discordstats
 import "github.com/bwmarrin/discordgo"
 
 // MessageFilter is a function for filtering Discord messages to process
-type MessageFilter func(*discordgo.Message, *discordgo.Channel) bool
+type MessageFilter func(*CrawledMessage) bool
 
 // MessageSource is an asynchronous source of Discord messages
 type MessageSource interface {
@@ -21,9 +21,17 @@ type Progress struct {
 	Error            error
 }
 
+// CrawledMessage is a wrapper around a Discord message that is aware of its channel and previous/next messages
+type CrawledMessage struct {
+	Message *discordgo.Message
+	Channel *discordgo.Channel
+	Older   *CrawledMessage
+	Newer   *CrawledMessage
+}
+
 // MessageRecipient is an object that can receive Discord messages and does something with them
 type MessageRecipient interface {
-	AddMessage(message *discordgo.Message) error
+	AddMessage(message *CrawledMessage) error
 }
 
 // DataProvider is an object that can provide an arbitrary serializable snapshot of some data

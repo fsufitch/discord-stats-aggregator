@@ -4,7 +4,7 @@ package discordstats
 // Synchronous; only returns when finished, or errored
 func EasyMode(authKey string, filters []MessageFilter, analyzers []MessageAnalyzer) ([]byte, error) {
 	var source MessageSource = &BasicMessageSource{DiscordAuthToken: authKey}
-	aggregator := JSONDataAggregator{}
+	aggregator := JSONDataAggregator{Providers: map[string]DataProvider{}}
 
 	source.AddFilters(filters...)
 
@@ -34,7 +34,7 @@ type AsyncResult struct {
 // Asynchronous and provides progress updates (for a progress bar), and does not halt on errors
 func EasyModeProgress(authKey string, filters []MessageFilter, analyzers []MessageAnalyzer) (<-chan Progress, <-chan AsyncResult) {
 	var source MessageSource = &BasicMessageSource{DiscordAuthToken: authKey}
-	aggregator := JSONDataAggregator{}
+	aggregator := JSONDataAggregator{Providers: map[string]DataProvider{}}
 
 	source.AddFilters(filters...)
 
@@ -51,6 +51,7 @@ func EasyModeProgress(authKey string, filters []MessageFilter, analyzers []Messa
 		for p := range progress {
 			ptProgress <- p
 		}
+		close(ptProgress)
 
 		data, err := aggregator.Aggregate()
 		resultChan <- AsyncResult{data, err}
