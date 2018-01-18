@@ -18,6 +18,7 @@ type Progress struct {
 	MessagesRead     int
 	MessagesRecorded int
 	PercentComplete  float64
+	CurrentChannel   *discordgo.Channel
 	Error            error
 }
 

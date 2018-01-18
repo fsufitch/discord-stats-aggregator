@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -22,6 +23,8 @@ func main() {
 		&analyzer.UserMessageTally{},
 		&analyzer.ReactionTally{},
 		&analyzer.TopReactionMessages{},
+		&analyzer.TotalCount{},
+		&analyzer.HereMentionTally{},
 	})
 
 	msgCounter := pb.New(0)
@@ -31,12 +34,25 @@ func main() {
 	msgCounter.ShowSpeed = true
 	msgCounter.Start()
 
+	currentChannelName := ""
+
 	for progress := range progressChan {
 		msgCounter.Set(progress.MessagesRead)
+		if progress.Error != nil {
+			fmt.Fprintln(os.Stderr, "non-halting error:", progress.Error)
+		}
+
+		if progress.CurrentChannel.Name != currentChannelName {
+			currentChannelName = progress.CurrentChannel.Name
+			fmt.Fprintln(os.Stderr, "Now working on channel:", currentChannelName)
+		}
 	}
 	msgCounter.Finish()
 
 	result := <-resultChan
-	fmt.Println("error was:", result.Error)
-	fmt.Println(string(result.Data))
+	if result.Error != nil {
+		fmt.Fprintln(os.Stderr, "error was:", result.Error)
+	} else {
+		ioutil.WriteFile("output.json", result.Data, 0600)
+	}
 }

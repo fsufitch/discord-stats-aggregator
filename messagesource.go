@@ -101,11 +101,12 @@ func (s BasicMessageSource) asyncStreamMessages(progressChan chan<- Progress) {
 
 	for _, ch := range channels {
 		for crawlMsg := range crawlLinkedMessages(session, ch) {
-			if messagesRecorded > 2000 {
-				break
-			}
+			// DEBUG: uncomment the following lines for faster debug
+			//if messagesRecorded > 5000 {
+			//  break
+			//}
 			if crawlMsg.Error != nil {
-				err = fmt.Errorf("error crawling messages: %v", err)
+				err = fmt.Errorf("error crawling messages: %v", crawlMsg.Error)
 			} else if s.applyFilters(crawlMsg.LinkedMessage) {
 				err = s.sendMessageToAllRecipients(crawlMsg.LinkedMessage)
 				if err != nil {
@@ -120,6 +121,7 @@ func (s BasicMessageSource) asyncStreamMessages(progressChan chan<- Progress) {
 				MessagesRead:     messagesRead,
 				MessagesRecorded: messagesRecorded,
 				PercentComplete:  float64(totalMessages) / float64(messagesRead),
+				CurrentChannel:   ch,
 				Error:            err,
 			}
 		}
@@ -139,12 +141,18 @@ func crawlLinkedMessages(s *discordgo.Session, channel *discordgo.Channel) <-cha
 	go func() {
 		beforeID := ""
 		var oldest *CrawledMessage
+		failures := 0
 		for {
 			messages, err := s.ChannelMessages(channel.ID, 100, beforeID, "", "")
 			if err != nil {
-				msgChan <- crawlMessage{Error: fmt.Errorf("error getting discord user channels: %v", err)}
-				close(msgChan)
-				return
+				failures++
+				if failures > 3 {
+					msgChan <- crawlMessage{Error: fmt.Errorf("too many errors getting discord channel messages, giving up (#%s): %v", channel.Name, err)}
+					close(msgChan)
+					return
+				}
+				msgChan <- crawlMessage{Error: fmt.Errorf("error getting discord channel messages, attempt (%d/3) (#%s): %v", failures, channel.Name, err)}
+				continue
 			}
 			linkedMessages := linkMessages(channel, messages, oldest)
 
