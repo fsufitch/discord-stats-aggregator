@@ -1,9 +1,9 @@
-package analyzers
+package analyzer
 
 import discordstats "github.com/fsufitch/discord-stats-aggregator"
 
-// UserMessageCountAnalyzer is an analyzer that tallies how many messages each user posted
-type UserMessageCountAnalyzer struct {
+// UserMessageTally is an analyzer that tallies how many messages each user posted
+type UserMessageTally struct {
 	messageCounts map[string]int
 }
 
@@ -12,12 +12,12 @@ type userMessageCountOutput struct {
 }
 
 // ID is used for creating the output structure
-func (a UserMessageCountAnalyzer) ID() string {
+func (a UserMessageTally) ID() string {
 	return "userMessageCounts"
 }
 
 // AddMessage implements the MessageRecipient interface
-func (a *UserMessageCountAnalyzer) AddMessage(message *discordstats.CrawledMessage) error {
+func (a *UserMessageTally) AddMessage(message *discordstats.CrawledMessage) error {
 	if a.messageCounts == nil {
 		a.messageCounts = map[string]int{}
 	}
@@ -30,6 +30,6 @@ func (a *UserMessageCountAnalyzer) AddMessage(message *discordstats.CrawledMessa
 }
 
 // GetData implements the DataProvider interface
-func (a UserMessageCountAnalyzer) GetData() (interface{}, error) {
+func (a UserMessageTally) GetData() (interface{}, error) {
 	return userMessageCountOutput{a.messageCounts}, nil
 }

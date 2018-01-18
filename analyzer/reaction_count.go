@@ -1,9 +1,9 @@
-package analyzers
+package analyzer
 
 import discordstats "github.com/fsufitch/discord-stats-aggregator"
 
-// ReactionCountAnalyzer is an analyzer that tallies how many times each reaction was used
-type ReactionCountAnalyzer struct {
+// ReactionTally is an analyzer that tallies how many times each reaction was used
+type ReactionTally struct {
 	reactionCounts map[string]int
 }
 
@@ -12,12 +12,12 @@ type reactionCountOutput struct {
 }
 
 // ID is used for creating the output structure
-func (a ReactionCountAnalyzer) ID() string {
+func (a ReactionTally) ID() string {
 	return "reactionCounts"
 }
 
 // AddMessage implements the MessageRecipient interface
-func (a *ReactionCountAnalyzer) AddMessage(message *discordstats.CrawledMessage) error {
+func (a *ReactionTally) AddMessage(message *discordstats.CrawledMessage) error {
 	if a.reactionCounts == nil {
 		a.reactionCounts = map[string]int{}
 	}
@@ -33,6 +33,6 @@ func (a *ReactionCountAnalyzer) AddMessage(message *discordstats.CrawledMessage)
 }
 
 // GetData implements the DataProvider interface
-func (a ReactionCountAnalyzer) GetData() (interface{}, error) {
+func (a ReactionTally) GetData() (interface{}, error) {
 	return userMessageCountOutput{a.reactionCounts}, nil
 }

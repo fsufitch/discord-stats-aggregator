@@ -7,17 +7,18 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/fsufitch/discord-stats-aggregator"
-	"github.com/fsufitch/discord-stats-aggregator/analyzers"
+	"github.com/fsufitch/discord-stats-aggregator/analyzer"
+	"github.com/fsufitch/discord-stats-aggregator/filter"
 )
 
 func main() {
 	authKey := os.Args[1]
 	progressChan, resultChan := discordstats.EasyModeProgress(authKey, []discordstats.MessageFilter{
-		discordstats.FilterByPublicChannel(true),
-		discordstats.FilterByBot(false),
+		filter.ByPublicChannel(true),
+		filter.ByBot(false),
 	}, []discordstats.MessageAnalyzer{
-		&analyzers.UserMessageCountAnalyzer{},
-		&analyzers.ReactionCountAnalyzer{},
+		&analyzer.UserMessageTally{},
+		&analyzer.ReactionTally{},
 	})
 
 	msgCounter := pb.New(0)
